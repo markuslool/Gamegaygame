@@ -4,7 +4,26 @@
 [ext_resource type="Script" uid="uid://be8v2yu77yif3" path="res://scripts/player.gd" id="2_player"]
 [ext_resource type="AudioStream" uid="uid://b27alxje51q2t" path="res://resorses/audio/steps.mp3" id="3_iyx0m"]
 
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
+sky_top_color = Color(0.3, 0.5, 0.85, 1)
+sky_horizon_color = Color(0.65, 0.75, 0.9, 1)
+ground_bottom_color = Color(0.25, 0.22, 0.2, 1)
+ground_horizon_color = Color(0.55, 0.55, 0.55, 1)
+sun_angle_max = 12.0
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMat_1")
+
 [sub_resource type="Environment" id="Environment_iyx0m"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 3
+ambient_light_energy = 0.7
+reflected_light_source = 2
+tonemap_mode = 3
+tonemap_exposure = 1.0
+ssao_enabled = true
+ssao_light_affect = 0.4
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_74lek"]
 
@@ -74,3 +93,7 @@ height = 7.3
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1880346800]
 transform = Transform3D(0.9456201, 0.074609704, -0.31660074, 0.32430336, -0.2913612, 0.89996445, -0.02509909, -0.9536991, -0.2997132, -22.511751, 32.6324, -25.746254)
+light_color = Color(1, 0.96, 0.9, 1)
+light_energy = 1.15
+shadow_enabled = true
+directional_shadow_max_distance = 120.0
