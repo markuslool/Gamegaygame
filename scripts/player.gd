@@ -19,19 +19,26 @@ const GameSettings := preload("res://scripts/settings.gd")
 @export var walk_pitch: float = 1.0
 @export var sprint_pitch: float = 1.35
 
-## Реестр предметов: id -> {имя, сколько стамины даёт, макс. в рюкзаке}.
+## Реестр предметов: id -> {имя, сколько стамины даёт, размер стака}.
 const ITEM_DEFS := {
-	"soda": {"name": "Газировка", "stamina": 50.0, "max": 5},
+	"soda": {"name": "Газировка", "stamina": 50.0, "stack": 16},
 }
+const HOTBAR_SIZE := 5
 
 @onready var camera: Camera3D = $Camera3D
 
 var stamina: float = 100.0
 var is_sprinting: bool = false
 
-## Инвентарь: id -> количество.
-var inventory: Dictionary = {}
-var _inv_label: Label
+## Хотбар как в Майнкрафте: слоты (null или {id, count}), выбранный слот.
+var slots: Array = []
+var selected := 0
+var _slot_panels: Array[PanelContainer] = []
+var _slot_icons: Array[TextureRect] = []
+var _slot_counts: Array[Label] = []
+var _hint_label: Label
+var _hand_root: Node3D
+var _soda_icon: Texture2D
 var _notice := ""
 var _notice_time := 0.0
 
@@ -62,6 +69,7 @@ func _ready() -> void:
 		($CSGCylinder3D as Node3D).visible = false
 	_build_stamina_ui()
 	_build_inventory_ui()
+	_build_hand_can()
 	_step_player = AudioStreamPlayer.new()
 	_step_player.name = "Steps"
 	_step_player.stream = STEP_SOUND
@@ -78,13 +86,21 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 		elif event.keycode == KEY_E:
-			use_item("soda")
+			use_selected()
+			get_viewport().set_input_as_handled()
+			return
+		elif event.keycode >= KEY_1 and event.keycode <= KEY_5:
+			select_slot(int(event.keycode) - int(KEY_1))
 			get_viewport().set_input_as_handled()
 			return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
+			select_slot(posmod(selected - 1, HOTBAR_SIZE))
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+			select_slot(posmod(selected + 1, HOTBAR_SIZE))
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var mm := event as InputEventMouseMotion
 		rotate_y(-mm.relative.x * mouse_sensitivity)
@@ -192,72 +208,255 @@ func _update_stamina_ui() -> void:
 func add_item(item_id: String, amount: int = 1) -> int:
 	if not ITEM_DEFS.has(item_id):
 		return 0
-	var def: Dictionary = ITEM_DEFS[item_id]
-	var max_n := int(def["max"])
-	var cur := int(inventory.get(item_id, 0))
-	var can := mini(amount, max_n - cur)
-	if can <= 0:
-		_notify("Рюкзак полон: %s (макс. %d)" % [str(def["name"]), max_n])
-		return 0
-	inventory[item_id] = cur + can
-	_notify("+%d %s" % [can, str(def["name"])])
+	var stack_max := int(ITEM_DEFS[item_id]["stack"])
+	var left := amount
+	# Сначала добиваем существующие стаки, потом пустые слоты.
+	for i in slots.size():
+		if left <= 0:
+			break
+		var s = slots[i]
+		if s != null and str(s["id"]) == item_id and int(s["count"]) < stack_max:
+			var can := mini(left, stack_max - int(s["count"]))
+			s["count"] = int(s["count"]) + can
+			left -= can
+	for i in slots.size():
+		if left <= 0:
+			break
+		if slots[i] == null:
+			var can := mini(left, stack_max)
+			slots[i] = {"id": item_id, "count": can}
+			left -= can
+	var got := amount - left
+	if got > 0:
+		_notify("+%d %s" % [got, str(ITEM_DEFS[item_id]["name"])])
+	else:
+		_notify("Нет места! Выпей что-нибудь (E).")
 	_update_inventory_ui()
-	return can
+	return got
 
 
-func use_item(item_id: String) -> bool:
-	if not ITEM_DEFS.has(item_id):
-		return false
-	var def: Dictionary = ITEM_DEFS[item_id]
-	var cur := int(inventory.get(item_id, 0))
-	if cur <= 0:
+func use_selected() -> bool:
+	var s = slots[selected]
+	if s == null or str(s["id"]) != "soda":
+		# Ищем соду в любом слоте и переключаемся на неё.
+		for i in slots.size():
+			var o = slots[i]
+			if o != null and str(o["id"]) == "soda":
+				select_slot(i)
+				return use_selected()
 		_notify("Нет газировки! Жми P, чтобы взять.")
 		_update_inventory_ui()
 		return false
-	inventory[item_id] = cur - 1
-	stamina = minf(stamina + float(def["stamina"]), stamina_max)
+	return use_item("soda")
+
+
+func use_item(item_id: String) -> bool:
+	var s = slots[selected]
+	if s == null or str(s["id"]) != item_id:
+		return false
+	s["count"] = int(s["count"]) - 1
+	if int(s["count"]) <= 0:
+		slots[selected] = null
+	stamina = minf(stamina + float(ITEM_DEFS[item_id]["stamina"]), stamina_max)
 	_update_stamina_ui()
 	_notify("Выпил газировку: +стамина")
 	_update_inventory_ui()
+	_update_hand()
 	return true
 
 
+func select_slot(i: int) -> void:
+	selected = clampi(i, 0, HOTBAR_SIZE - 1)
+	_update_inventory_ui()
+	_update_hand()
+
+
+func _make_soda_icon() -> Texture2D:
+	var img := Image.create_empty(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in range(8, 28):
+		for x in range(10, 22):
+			img.set_pixel(x, y, Color(0.85, 0.15, 0.2))
+	for y in range(9, 27):
+		img.set_pixel(12, y, Color(1.0, 0.55, 0.55))
+		img.set_pixel(13, y, Color(1.0, 0.55, 0.55))
+	for x in range(11, 21):
+		for y in [6, 7, 28, 29]:
+			img.set_pixel(x, y, Color(0.8, 0.8, 0.85))
+	img.set_pixel(16, 7, Color(0.4, 0.4, 0.45))
+	return ImageTexture.create_from_image(img)
+
+
+func _slot_stylebox(sel: bool) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0.55)
+	sb.border_color = Color(1, 0.9, 0.3) if sel else Color(0.5, 0.5, 0.5, 0.8)
+	sb.set_border_width_all(3 if sel else 1)
+	sb.set_corner_radius_all(6)
+	sb.content_margin_left = 4.0
+	sb.content_margin_right = 4.0
+	sb.content_margin_top = 4.0
+	sb.content_margin_bottom = 4.0
+	return sb
+
+
 func _build_inventory_ui() -> void:
+	slots.clear()
+	for i in HOTBAR_SIZE:
+		slots.append(null)
+	_soda_icon = _make_soda_icon()
+
 	var layer := CanvasLayer.new()
 	layer.name = "InventoryHUD"
 	layer.layer = 5
 	add_child(layer)
 
-	_inv_label = Label.new()
-	_inv_label.name = "InventoryLabel"
-	_inv_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_inv_label.offset_left = 12.0
-	_inv_label.offset_top = 12.0
-	_inv_label.offset_right = 400.0
-	_inv_label.offset_bottom = 140.0
-	_inv_label.add_theme_font_size_override("font_size", 18)
-	_inv_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
-	_inv_label.add_theme_constant_override("outline_size", 4)
-	layer.add_child(_inv_label)
+	var bar := HBoxContainer.new()
+	bar.name = "Hotbar"
+	bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	bar.anchor_left = 0.5
+	bar.anchor_right = 0.5
+	bar.anchor_top = 1.0
+	bar.anchor_bottom = 1.0
+	bar.offset_left = -150.0
+	bar.offset_right = 150.0
+	bar.offset_top = -172.0
+	bar.offset_bottom = -116.0
+	bar.alignment = BoxContainer.ALIGNMENT_CENTER
+	bar.add_theme_constant_override("separation", 6)
+	layer.add_child(bar)
+
+	_slot_panels.clear()
+	_slot_icons.clear()
+	_slot_counts.clear()
+	for i in HOTBAR_SIZE:
+		var panel := PanelContainer.new()
+		panel.custom_minimum_size = Vector2(52, 52)
+		panel.add_theme_stylebox_override("panel", _slot_stylebox(i == selected))
+		bar.add_child(panel)
+		_slot_panels.append(panel)
+
+		var icon := TextureRect.new()
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(44, 44)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(icon)
+		_slot_icons.append(icon)
+
+		var num := Label.new()
+		num.text = str(i + 1)
+		num.add_theme_font_size_override("font_size", 12)
+		num.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+		num.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		num.offset_left = 3.0
+		num.offset_top = 1.0
+		num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(num)
+
+		var count := Label.new()
+		count.add_theme_font_size_override("font_size", 16)
+		count.add_theme_color_override("font_color", Color(1, 1, 1))
+		count.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		count.add_theme_constant_override("outline_size", 4)
+		count.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		count.offset_left = -26.0
+		count.offset_top = -24.0
+		count.offset_right = -3.0
+		count.offset_bottom = -3.0
+		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(count)
+		_slot_counts.append(count)
+
+	_hint_label = Label.new()
+	_hint_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_hint_label.anchor_left = 0.5
+	_hint_label.anchor_right = 0.5
+	_hint_label.anchor_top = 1.0
+	_hint_label.anchor_bottom = 1.0
+	_hint_label.offset_left = -300.0
+	_hint_label.offset_right = 300.0
+	_hint_label.offset_top = -114.0
+	_hint_label.offset_bottom = -52.0
+	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_hint_label.add_theme_font_size_override("font_size", 14)
+	_hint_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.85))
+	_hint_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	_hint_label.add_theme_constant_override("outline_size", 4)
+	layer.add_child(_hint_label)
 	_update_inventory_ui()
 
 
 func _update_inventory_ui() -> void:
-	if _inv_label == null:
+	if _hint_label == null:
 		return
-	var lines: Array[String] = ["Инвентарь:"]
-	for id in ITEM_DEFS.keys():
-		lines.append("%s x%d" % [str(ITEM_DEFS[id]["name"]), int(inventory.get(id, 0))])
-	lines.append("[P] взять газировку  [E] выпить (+50)")
+	for i in HOTBAR_SIZE:
+		_slot_panels[i].add_theme_stylebox_override("panel", _slot_stylebox(i == selected))
+		var s = slots[i]
+		if s != null and str(s["id"]) == "soda":
+			_slot_icons[i].texture = _soda_icon
+			_slot_counts[i].text = str(int(s["count"]))
+		else:
+			_slot_icons[i].texture = null
+			_slot_counts[i].text = ""
+	var lines: Array[String] = ["[1-5/колесо] выбор  [P] взять  [E] выпить"]
 	if _notice_time > 0.0 and not _notice.is_empty():
 		lines.append(_notice)
-	_inv_label.text = "\n".join(lines)
+	_hint_label.text = "\n".join(lines)
 
 
 func _notify(text: String, time: float = 2.0) -> void:
 	_notice = text
 	_notice_time = time
 	_update_inventory_ui()
+
+
+func _build_hand_can() -> void:
+	_hand_root = Node3D.new()
+	_hand_root.name = "HandCan"
+	_hand_root.position = Vector3(0.35, -0.32, -0.7)
+	camera.add_child(_hand_root)
+
+	var red := StandardMaterial3D.new()
+	red.albedo_color = Color(0.85, 0.15, 0.2)
+	red.roughness = 0.35
+	var silver := StandardMaterial3D.new()
+	silver.albedo_color = Color(0.8, 0.8, 0.85)
+	silver.metallic = 0.8
+	silver.roughness = 0.3
+
+	var body := MeshInstance3D.new()
+	var can_mesh := CylinderMesh.new()
+	can_mesh.top_radius = 0.035
+	can_mesh.bottom_radius = 0.035
+	can_mesh.height = 0.12
+	can_mesh.radial_segments = 16
+	body.mesh = can_mesh
+	body.material_override = red
+	_hand_root.add_child(body)
+
+	var lid := MeshInstance3D.new()
+	var lid_mesh := CylinderMesh.new()
+	lid_mesh.top_radius = 0.036
+	lid_mesh.bottom_radius = 0.036
+	lid_mesh.height = 0.012
+	lid_mesh.radial_segments = 16
+	lid.mesh = lid_mesh
+	lid.material_override = silver
+	lid.position = Vector3(0, 0.062, 0)
+	_hand_root.add_child(lid)
+
+	_hand_root.rotation_degrees = Vector3(-12, -18, 6)
+	_update_hand()
+
+
+func _update_hand() -> void:
+	if _hand_root == null:
+		return
+	var s = slots[selected] if selected < slots.size() else null
+	_hand_root.visible = s != null and str(s["id"]) == "soda"
 
 
 func _update_steps(delta: float, moving: bool) -> void:
