@@ -17,6 +17,8 @@ size = Vector3(50, 1.2, 50)
 
 [node name="test" type="Node3D" unique_id=1472224898]
 
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1783029330]
+
 [node name="player" type="CharacterBody3D" parent="." unique_id=1566574314]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.0345984, 0)
 script = ExtResource("2_player")
@@ -53,22 +55,6 @@ mesh = SubResource("BoxMesh_iyx0m")
 [node name="Collision" type="CollisionShape3D" parent="Level/Ground" unique_id=491938948]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 shape = SubResource("BoxShape3D_74lek")
-
-[node name="Ground2" type="StaticBody3D" parent="Level" unique_id=1719347829]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.427774, 0)
-
-[node name="Mesh" type="MeshInstance3D" parent="Level/Ground2" unique_id=227287924]
-mesh = SubResource("BoxMesh_iyx0m")
-
-[node name="Collision" type="CollisionShape3D" parent="Level/Ground2" unique_id=917510463]
-shape = SubResource("BoxShape3D_74lek")
-
-[node name="SpotLight3D" type="SpotLight3D" parent="." unique_id=1169113251]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 12.785688, 0)
-light_energy = 16.0
-spot_range = 33.79741
-spot_angle = 68.56428
-spot_angle_attenuation = 0.35355416
 
 [node name="CSGCylinder3D" type="CSGCylinder3D" parent="." unique_id=1887967739]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.117606, -10.698897)
