@@ -1,7 +1,6 @@
 extends CharacterBody3D
-## Скрипт для твоего ручного player (CharacterBody3D).
-## Гравитация + коллизия (move_and_slide) + WASD + прыжок + мышь.
-## Клик — захват мыши, Esc — освободить.
+
+const MAIN_MENU_SCENE := "res://scenes/main_menu.tscn"
 
 @export var speed: float = 5.0
 @export var sprint_speed: float = 8.5
@@ -22,8 +21,16 @@ var _pitch: float = 0.0
 var _regen_cooldown: float = 0.0
 var _stamina_bar: ProgressBar
 
+var _paused: bool = false
+var _pause_layer: CanvasLayer
+var _resume_button: Button
+
 
 func _ready() -> void:
+	# Нужен ALWAYS чтобы Esc работал и в паузе
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().paused = false
+	_paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	stamina = stamina_max
 	camera.current = true
@@ -32,9 +39,18 @@ func _ready() -> void:
 	if has_node("CSGCylinder3D"):
 		($CSGCylinder3D as Node3D).visible = false
 	_build_stamina_ui()
+	_build_pause_menu()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_toggle_pause()
+		get_viewport().set_input_as_handled()
+		return
+
+	if _paused:
+		return
+
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
@@ -45,11 +61,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		_pitch = clampf(_pitch - mm.relative.y * mouse_sensitivity, -1.4, 1.4)
 		camera.rotation.x = _pitch
 
-	if event.is_action_pressed("ui_cancel"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
 
 func _physics_process(delta: float) -> void:
+	if _paused:
+		return
+
 	# Гравитация
 	if not is_on_floor():
 		velocity += get_gravity() * delta
@@ -133,3 +149,104 @@ func _update_stamina_ui() -> void:
 	var fill := _stamina_bar.get_theme_stylebox("fill") as StyleBoxFlat
 	if fill != null:
 		fill.bg_color = Color(0.9, 0.25, 0.2, 1) if stamina < 25.0 else Color(0.25, 0.8, 0.35, 1)
+
+
+func _build_pause_menu() -> void:
+	_pause_layer = CanvasLayer.new()
+	_pause_layer.name = "PauseMenu"
+	_pause_layer.layer = 10
+	_pause_layer.visible = false
+	add_child(_pause_layer)
+
+	var dim := ColorRect.new()
+	dim.name = "Dim"
+	dim.color = Color(0, 0, 0, 0.6)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_pause_layer.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.name = "Center"
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_pause_layer.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.name = "Panel"
+	panel.custom_minimum_size = Vector2(320, 0)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "Пауза"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 36)
+	vbox.add_child(title)
+
+	var hint := Label.new()
+	hint.text = "Esc — продолжить"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_color_override("font_color", Color(0.65, 0.7, 0.8))
+	hint.add_theme_font_size_override("font_size", 14)
+	vbox.add_child(hint)
+
+	_resume_button = Button.new()
+	_resume_button.name = "ResumeButton"
+	_resume_button.text = "Продолжить"
+	_resume_button.custom_minimum_size = Vector2(260, 48)
+	_resume_button.add_theme_font_size_override("font_size", 22)
+	_resume_button.pressed.connect(_resume_game)
+	vbox.add_child(_resume_button)
+
+	var menu_button := Button.new()
+	menu_button.name = "MenuButton"
+	menu_button.text = "В главное меню"
+	menu_button.custom_minimum_size = Vector2(260, 48)
+	menu_button.add_theme_font_size_override("font_size", 22)
+	menu_button.pressed.connect(_quit_to_menu)
+	vbox.add_child(menu_button)
+
+	var quit_button := Button.new()
+	quit_button.name = "QuitButton"
+	quit_button.text = "Выйти из игры"
+	quit_button.custom_minimum_size = Vector2(260, 44)
+	quit_button.add_theme_font_size_override("font_size", 18)
+	quit_button.pressed.connect(_quit_game)
+	vbox.add_child(quit_button)
+
+
+func _toggle_pause() -> void:
+	_paused = not _paused
+	get_tree().paused = _paused
+	_pause_layer.visible = _paused
+	if _paused:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		_resume_button.grab_focus()
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func _resume_game() -> void:
+	if _paused:
+		_toggle_pause()
+
+
+func _quit_to_menu() -> void:
+	get_tree().paused = false
+	_paused = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+
+
+func _quit_game() -> void:
+	get_tree().paused = false
+	get_tree().quit()

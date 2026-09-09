@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://brk8k5j3hct64"]
+
+[ext_resource type="Script" uid="uid://dpj0ihi8m8tfm" path="res://scripts/main_menu.gd" id="1_menu"]
+[ext_resource type="Texture2D" uid="uid://b0i27shy8wv03" path="res://resorses/image/the-backrooms-lcwz7av7xsd9fl5l-993472238.jpg" id="2_ekxnf"]
+
+[node name="MainMenu" type="Control" unique_id=1602205106]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="TheBackroomsLcwz7Av7Xsd9Fl5l993472238" type="Sprite2D" parent="." unique_id=1805269366]
+position = Vector2(576.5, 323.00003)
+scale = Vector2(0.5984375, 0.5962963)
+texture = ExtResource("2_ekxnf")
+
+[node name="Center" type="CenterContainer" parent="." unique_id=514029302]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = -51.0
+offset_right = 4.0
+offset_bottom = -51.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center" unique_id=2114797447]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="PlayButton" type="Button" parent="Center/VBox" unique_id=178031700]
+custom_minimum_size = Vector2(260, 56)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Играть"
+
+[node name="QuitButton" type="Button" parent="Center/VBox" unique_id=1339292761]
+custom_minimum_size = Vector2(260, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Выйти"
