@@ -2,6 +2,7 @@
 
 [ext_resource type="Shape3D" uid="uid://dohtk3y8ncbr3" path="res://resorses/collisions/player.tres" id="1_errlg"]
 [ext_resource type="Script" uid="uid://be8v2yu77yif3" path="res://scripts/player.gd" id="2_player"]
+[ext_resource type="AudioStream" uid="uid://b27alxje51q2t" path="res://resorses/audio/steps.mp3" id="3_iyx0m"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.3, 0.45, 0.3, 1)
@@ -33,6 +34,14 @@ fov = 74.24853
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4584961, 0)
 radius = 2.0
 height = 7.3
+
+[node name="AudioListener3D" type="AudioListener3D" parent="player" unique_id=1743080122]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2202215, 0)
+
+[node name="StepsStreamer" type="AudioStreamPlayer3D" parent="player" unique_id=430313984]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.4102454, 0)
+stream = ExtResource("3_iyx0m")
+bus = &"Player"
 
 [node name="Level" type="Node" parent="." unique_id=1932939128]
 
