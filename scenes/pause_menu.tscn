@@ -67,6 +67,13 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "В главное меню"
 
+[node name="SettingsButton" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 48)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Настройки"
+
 [node name="QuitButton" type="Button" parent="Center/Panel/Margin/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(260, 44)
