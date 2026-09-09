@@ -42,6 +42,35 @@ const ASPECT_NAMES: PackedStringArray = [
 	"Растянуть (искажение)",
 ]
 
+const MSAA_MODES: Array[Viewport.MSAA] = [
+	Viewport.MSAA_DISABLED,
+	Viewport.MSAA_2X,
+	Viewport.MSAA_4X,
+	Viewport.MSAA_8X,
+]
+
+# Один выбор = готовый пресет (индекс MSAA, FXAA, TAA)
+const AA_NAMES: PackedStringArray = [
+	"Выкл",
+	"FXAA (быстро)",
+	"MSAA 2×",
+	"MSAA 4×",
+	"MSAA 4× + FXAA",
+	"MSAA 8×",
+	"TAA",
+	"TAA + FXAA",
+]
+const AA_MSAA: Array = [0, 0, 1, 2, 2, 3, 0, 0]
+const AA_FXAA: Array = [false, true, false, false, true, false, false, true]
+const AA_TAA: Array = [false, false, false, false, false, false, true, true]
+
+const UPSCALERS: Array[Viewport.Scaling3DMode] = [
+	Viewport.SCALING_3D_MODE_BILINEAR,
+	Viewport.SCALING_3D_MODE_FSR,
+	Viewport.SCALING_3D_MODE_FSR2,
+]
+const UPSCALER_NAMES: PackedStringArray = ["Билинейный", "FSR 1.0", "FSR 2.2"]
+
 @onready var screen_label: Label = %ScreenLabel
 @onready var vol_slider: HSlider = %VolSlider
 @onready var vol_label: Label = %VolLabel
@@ -49,6 +78,10 @@ const ASPECT_NAMES: PackedStringArray = [
 @onready var mode_options: OptionButton = %ModeOptions
 @onready var aspect_options: OptionButton = %AspectOptions
 @onready var vsync_check: CheckButton = %VSync
+@onready var aa_options: OptionButton = %AA
+@onready var upscaler_options: OptionButton = %Upscaler
+@onready var render_scale_slider: HSlider = %RenderScale
+@onready var render_scale_label: Label = %RenderScaleLabel
 @onready var back_button: Button = %BackButton
 
 var _resolutions_cache: Array[Vector2i] = []
@@ -73,6 +106,10 @@ func _ready() -> void:
 		mode_options.add_item(n)
 	for n in ASPECT_NAMES:
 		aspect_options.add_item(n)
+	for n in AA_NAMES:
+		aa_options.add_item(n)
+	for n in UPSCALER_NAMES:
+		upscaler_options.add_item(n)
 
 	var cfg := _load_cfg()
 	vol_slider.set_value_no_signal(float(cfg.get_value("audio", "volume", 80.0)))
@@ -81,12 +118,19 @@ func _ready() -> void:
 	mode_options.select(clampi(int(cfg.get_value("video", "window_mode", 0)), 0, MODES.size() - 1))
 	aspect_options.select(_saved_aspect_idx(cfg))
 	vsync_check.set_pressed_no_signal(bool(cfg.get_value("video", "vsync", true)))
+	aa_options.select(_saved_aa_idx(cfg))
+	upscaler_options.select(clampi(int(cfg.get_value("video", "upscaler", 0)), 0, UPSCALERS.size() - 1))
+	render_scale_slider.set_value_no_signal(float(cfg.get_value("video", "render_scale", 100.0)))
+	render_scale_label.text = "Масштаб рендера: %d%%" % int(render_scale_slider.value)
 
 	vol_slider.value_changed.connect(_on_volume_changed)
 	res_options.item_selected.connect(_on_video_changed.unbind(1))
 	mode_options.item_selected.connect(_on_video_changed.unbind(1))
 	aspect_options.item_selected.connect(_on_video_changed.unbind(1))
 	vsync_check.toggled.connect(_on_video_changed.unbind(1))
+	aa_options.item_selected.connect(_on_video_changed.unbind(1))
+	upscaler_options.item_selected.connect(_on_video_changed.unbind(1))
+	render_scale_slider.value_changed.connect(_on_render_scale_changed)
 	back_button.pressed.connect(close)
 
 	_apply_all()
@@ -112,6 +156,12 @@ static func apply_saved(tree: SceneTree) -> void:
 		clampi(int(cfg.get_value("video", "window_mode", 0)), 0, MODES.size() - 1),
 		_saved_aspect_idx(cfg),
 		bool(cfg.get_value("video", "vsync", true))
+	)
+	_apply_render(
+		tree.root,
+		_saved_aa_idx(cfg),
+		clampi(int(cfg.get_value("video", "upscaler", 0)), 0, UPSCALERS.size() - 1),
+		float(cfg.get_value("video", "render_scale", 100.0))
 	)
 
 
@@ -193,9 +243,27 @@ static func _saved_aspect_idx(cfg: ConfigFile) -> int:
 	return 0
 
 
+# Старый сейв хранит msaa/fxaa/taa по отдельности — маппим на пресет.
+# Точного совпадения может не быть — тогда подбираем по MSAA+TAA.
+static func _saved_aa_idx(cfg: ConfigFile) -> int:
+	if cfg.has_section_key("video", "aa_preset"):
+		return clampi(int(cfg.get_value("video", "aa_preset", 0)), 0, AA_NAMES.size() - 1)
+	var msaa := clampi(int(cfg.get_value("video", "msaa3d", 0)), 0, MSAA_MODES.size() - 1)
+	var fxaa := bool(cfg.get_value("video", "fxaa", false))
+	var taa := bool(cfg.get_value("video", "taa", false))
+	for i in AA_NAMES.size():
+		if int(AA_MSAA[i]) == msaa and bool(AA_FXAA[i]) == fxaa and bool(AA_TAA[i]) == taa:
+			return i
+	for i in AA_NAMES.size():
+		if int(AA_MSAA[i]) == msaa and bool(AA_TAA[i]) == taa:
+			return i
+	return 0
+
+
 func _apply_all() -> void:
 	_apply_audio(vol_slider.value)
 	_apply_video(get_tree(), _resolutions_cache[res_options.selected], mode_options.selected, aspect_options.selected, vsync_check.button_pressed)
+	_apply_render(get_viewport(), aa_options.selected, upscaler_options.selected, render_scale_slider.value)
 	_save()
 
 
@@ -203,6 +271,11 @@ func _on_volume_changed(value: float) -> void:
 	vol_label.text = "Громкость: %d%%" % int(value)
 	_apply_audio(value)
 	_save()
+
+
+func _on_render_scale_changed(value: float) -> void:
+	render_scale_label.text = "Масштаб рендера: %d%%" % int(value)
+	_apply_all()
 
 
 func _on_video_changed() -> void:
@@ -213,6 +286,17 @@ static func _apply_audio(volume: float) -> void:
 	var master := AudioServer.get_bus_index("Master")
 	AudioServer.set_bus_mute(master, volume <= 0.0)
 	AudioServer.set_bus_volume_db(master, linear_to_db(maxf(volume / 100.0, 0.0001)))
+
+
+static func _apply_render(vp: Viewport, aa_idx: int, upscaler_idx: int, render_scale: float) -> void:
+	if vp == null:
+		return
+	var a := clampi(aa_idx, 0, AA_NAMES.size() - 1)
+	vp.msaa_3d = MSAA_MODES[int(AA_MSAA[a])]
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if bool(AA_FXAA[a]) else Viewport.SCREEN_SPACE_AA_DISABLED
+	vp.use_taa = bool(AA_TAA[a])
+	vp.scaling_3d_mode = UPSCALERS[clampi(upscaler_idx, 0, UPSCALERS.size() - 1)]
+	vp.scaling_3d_scale = clampf(render_scale / 100.0, 0.25, 2.0)
 
 
 static func _apply_video(tree: SceneTree, size: Vector2i, mode_idx: int, aspect_idx: int, vsync: bool) -> void:
@@ -238,6 +322,9 @@ func _save() -> void:
 	cfg.set_value("video", "window_mode", mode_options.selected)
 	cfg.set_value("video", "aspect", aspect_options.selected)
 	cfg.set_value("video", "vsync", vsync_check.button_pressed)
+	cfg.set_value("video", "aa_preset", aa_options.selected)
+	cfg.set_value("video", "upscaler", upscaler_options.selected)
+	cfg.set_value("video", "render_scale", render_scale_slider.value)
 	cfg.save(SAVE_PATH)
 
 
