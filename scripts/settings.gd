@@ -82,6 +82,8 @@ const UPSCALER_NAMES: PackedStringArray = ["Билинейный", "FSR 1.0", "F
 @onready var upscaler_options: OptionButton = %Upscaler
 @onready var render_scale_slider: HSlider = %RenderScale
 @onready var render_scale_label: Label = %RenderScaleLabel
+@onready var sharp_slider: HSlider = %SharpSlider
+@onready var sharp_label: Label = %SharpLabel
 @onready var back_button: Button = %BackButton
 
 var _resolutions_cache: Array[Vector2i] = []
@@ -122,6 +124,8 @@ func _ready() -> void:
 	upscaler_options.select(clampi(int(cfg.get_value("video", "upscaler", 0)), 0, UPSCALERS.size() - 1))
 	render_scale_slider.set_value_no_signal(float(cfg.get_value("video", "render_scale", 100.0)))
 	render_scale_label.text = "Масштаб рендера: %d%%" % int(render_scale_slider.value)
+	sharp_slider.set_value_no_signal(float(cfg.get_value("video", "fsr_sharpness", 90.0)))
+	sharp_label.text = "Резкость FSR: %d%%" % int(sharp_slider.value)
 
 	vol_slider.value_changed.connect(_on_volume_changed)
 	res_options.item_selected.connect(_on_video_changed.unbind(1))
@@ -131,6 +135,7 @@ func _ready() -> void:
 	aa_options.item_selected.connect(_on_video_changed.unbind(1))
 	upscaler_options.item_selected.connect(_on_video_changed.unbind(1))
 	render_scale_slider.value_changed.connect(_on_render_scale_changed)
+	sharp_slider.value_changed.connect(_on_sharp_changed)
 	back_button.pressed.connect(close)
 
 	_apply_all()
@@ -161,7 +166,8 @@ static func apply_saved(tree: SceneTree) -> void:
 		tree.root,
 		_saved_aa_idx(cfg),
 		clampi(int(cfg.get_value("video", "upscaler", 0)), 0, UPSCALERS.size() - 1),
-		float(cfg.get_value("video", "render_scale", 100.0))
+		float(cfg.get_value("video", "render_scale", 100.0)),
+		float(cfg.get_value("video", "fsr_sharpness", 90.0))
 	)
 
 
@@ -263,7 +269,7 @@ static func _saved_aa_idx(cfg: ConfigFile) -> int:
 func _apply_all() -> void:
 	_apply_audio(vol_slider.value)
 	_apply_video(get_tree(), _resolutions_cache[res_options.selected], mode_options.selected, aspect_options.selected, vsync_check.button_pressed)
-	_apply_render(get_viewport(), aa_options.selected, upscaler_options.selected, render_scale_slider.value)
+	_apply_render(get_viewport(), aa_options.selected, upscaler_options.selected, render_scale_slider.value, sharp_slider.value)
 	_save()
 
 
@@ -278,6 +284,11 @@ func _on_render_scale_changed(value: float) -> void:
 	_apply_all()
 
 
+func _on_sharp_changed(value: float) -> void:
+	sharp_label.text = "Резкость FSR: %d%%" % int(value)
+	_apply_all()
+
+
 func _on_video_changed() -> void:
 	_apply_all()
 
@@ -288,7 +299,7 @@ static func _apply_audio(volume: float) -> void:
 	AudioServer.set_bus_volume_db(master, linear_to_db(maxf(volume / 100.0, 0.0001)))
 
 
-static func _apply_render(vp: Viewport, aa_idx: int, upscaler_idx: int, render_scale: float) -> void:
+static func _apply_render(vp: Viewport, aa_idx: int, upscaler_idx: int, render_scale: float, sharpness: float) -> void:
 	if vp == null:
 		return
 	var a := clampi(aa_idx, 0, AA_NAMES.size() - 1)
@@ -297,6 +308,8 @@ static func _apply_render(vp: Viewport, aa_idx: int, upscaler_idx: int, render_s
 	vp.use_taa = bool(AA_TAA[a])
 	vp.scaling_3d_mode = UPSCALERS[clampi(upscaler_idx, 0, UPSCALERS.size() - 1)]
 	vp.scaling_3d_scale = clampf(render_scale / 100.0, 0.25, 2.0)
+	# В движке инверсия: 0.0 — макс. резкость, 2.0 — минимум. Дефолт 0.2.
+	vp.fsr_sharpness = clampf((100.0 - sharpness) / 100.0 * 2.0, 0.0, 2.0)
 
 
 static func _apply_video(tree: SceneTree, size: Vector2i, mode_idx: int, aspect_idx: int, vsync: bool) -> void:
@@ -325,6 +338,7 @@ func _save() -> void:
 	cfg.set_value("video", "aa_preset", aa_options.selected)
 	cfg.set_value("video", "upscaler", upscaler_options.selected)
 	cfg.set_value("video", "render_scale", render_scale_slider.value)
+	cfg.set_value("video", "fsr_sharpness", sharp_slider.value)
 	cfg.save(SAVE_PATH)
 
 

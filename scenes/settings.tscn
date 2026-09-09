@@ -157,6 +157,28 @@ max_value = 200.0
 step = 5.0
 value = 100.0
 
+[node name="SharpLabel" type="Label" parent="Center/Panel/Margin/Scroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Резкость FSR: 90%"
+horizontal_alignment = 1
+
+[node name="SharpSlider" type="HSlider" parent="Center/Panel/Margin/Scroll/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 24)
+layout_mode = 2
+max_value = 100.0
+step = 1.0
+value = 90.0
+
+[node name="SharpHint" type="Label" parent="Center/Panel/Margin/Scroll/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 14
+text = "Только FSR 1.0 / 2.2 (0 — макс. резкость в движке)"
+horizontal_alignment = 1
+
 [node name="BackButton" type="Button" parent="Center/Panel/Margin/Scroll/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(260, 48)
