@@ -12,10 +12,25 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
 
-[node name="TheBackroomsLcwz7Av7Xsd9Fl5l993472238" type="Sprite2D" parent="." unique_id=1805269366]
-position = Vector2(576.5, 323.00003)
-scale = Vector2(0.5984375, 0.5962963)
+[node name="Background" type="TextureRect" parent="." unique_id=1805269366]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 texture = ExtResource("2_ekxnf")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1805269367]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.45)
 
 [node name="Center" type="CenterContainer" parent="." unique_id=514029302]
 layout_mode = 1
@@ -24,8 +39,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 4.0
 offset_top = -51.0
-offset_right = 4.0
-offset_bottom = -51.0
+offset_right = 2.0
+offset_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -39,6 +54,12 @@ custom_minimum_size = Vector2(260, 56)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "Играть"
+
+[node name="SettingsButton" type="Button" parent="Center/VBox" unique_id=987654321]
+custom_minimum_size = Vector2(260, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Настройки"
 
 [node name="QuitButton" type="Button" parent="Center/VBox" unique_id=1339292761]
 custom_minimum_size = Vector2(260, 50)

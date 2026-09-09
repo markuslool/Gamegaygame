@@ -1,6 +1,7 @@
 extends CharacterBody3D
 
 const PAUSE_MENU := preload("res://scenes/pause_menu.tscn")
+const STEP_SOUND := preload("res://resorses/audio/steps.mp3")
 
 @export var speed: float = 5.0
 @export var sprint_speed: float = 8.5
@@ -12,6 +13,11 @@ const PAUSE_MENU := preload("res://scenes/pause_menu.tscn")
 @export var stamina_regen: float = 18.0
 @export var stamina_regen_delay: float = 1.0
 
+@export var walk_step_interval: float = 0.4
+@export var sprint_step_interval: float = 0.28
+@export var walk_pitch: float = 1.0
+@export var sprint_pitch: float = 1.35
+
 @onready var camera: Camera3D = $Camera3D
 
 var stamina: float = 100.0
@@ -20,6 +26,9 @@ var is_sprinting: bool = false
 var _pitch: float = 0.0
 var _regen_cooldown: float = 0.0
 var _stamina_bar: ProgressBar
+
+var _step_player: AudioStreamPlayer
+var _step_timer: float = 0.0
 
 var _pause_menu: CanvasLayer
 
@@ -34,6 +43,10 @@ func _ready() -> void:
 	if has_node("CSGCylinder3D"):
 		($CSGCylinder3D as Node3D).visible = false
 	_build_stamina_ui()
+	_step_player = AudioStreamPlayer.new()
+	_step_player.name = "Steps"
+	_step_player.stream = STEP_SOUND
+	add_child(_step_player)
 	_pause_menu = PAUSE_MENU.instantiate()
 	add_child(_pause_menu)
 
@@ -92,6 +105,7 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	_update_stamina_ui()
+	_update_steps(delta, input_dir.length() > 0.1)
 
 
 func _build_stamina_ui() -> void:
@@ -138,3 +152,21 @@ func _update_stamina_ui() -> void:
 	var fill := _stamina_bar.get_theme_stylebox("fill") as StyleBoxFlat
 	if fill != null:
 		fill.bg_color = Color(0.9, 0.25, 0.2, 1) if stamina < 25.0 else Color(0.25, 0.8, 0.35, 1)
+
+
+func _update_steps(delta: float, moving: bool) -> void:
+	if _step_player == null:
+		return
+	if not moving or not is_on_floor():
+		_step_timer = 0.0
+		return
+	_step_timer -= delta
+	if _step_timer > 0.0:
+		return
+	if is_sprinting:
+		_step_player.pitch_scale = sprint_pitch * randf_range(0.97, 1.03)
+		_step_timer = sprint_step_interval
+	else:
+		_step_player.pitch_scale = walk_pitch * randf_range(0.97, 1.03)
+		_step_timer = walk_step_interval
+	_step_player.play()
