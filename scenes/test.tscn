@@ -2,6 +2,7 @@
 
 [ext_resource type="Shape3D" uid="uid://dohtk3y8ncbr3" path="res://resorses/collisions/player.tres" id="1_errlg"]
 [ext_resource type="Script" uid="uid://be8v2yu77yif3" path="res://scripts/player.gd" id="2_player"]
+[ext_resource type="AudioStream" uid="uid://b27alxje51q2t" path="res://resorses/audio/steps.mp3" id="3_iyx0m"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.3, 0.45, 0.3, 1)
@@ -12,7 +13,7 @@ material = SubResource("Mat_ground")
 size = Vector3(50, 1, 50)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_74lek"]
-size = Vector3(50, 1, 50)
+size = Vector3(50, 1.2, 50)
 
 [node name="test" type="Node3D" unique_id=1472224898]
 
@@ -21,16 +22,26 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.0345984, 0)
 script = ExtResource("2_player")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="player" unique_id=263016561]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.58740234, 0)
 shape = ExtResource("1_errlg")
 
 [node name="Camera3D" type="Camera3D" parent="player" unique_id=2105755736]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -0.006)
 current = true
-fov = 70.0
+fov = 74.24853
 
 [node name="CSGCylinder3D" type="CSGCylinder3D" parent="player" unique_id=602873205]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4584961, 0)
 radius = 2.0
-height = 8.0
+height = 7.3
+
+[node name="AudioListener3D" type="AudioListener3D" parent="player" unique_id=1743080122]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2202215, 0)
+
+[node name="StepsStreamer" type="AudioStreamPlayer3D" parent="player" unique_id=430313984]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.4102454, 0)
+stream = ExtResource("3_iyx0m")
+bus = &"Player"
 
 [node name="Level" type="Node" parent="." unique_id=1932939128]
 
@@ -40,10 +51,11 @@ height = 8.0
 mesh = SubResource("BoxMesh_iyx0m")
 
 [node name="Collision" type="CollisionShape3D" parent="Level/Ground" unique_id=491938948]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 shape = SubResource("BoxShape3D_74lek")
 
 [node name="Ground2" type="StaticBody3D" parent="Level" unique_id=1719347829]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 17.77977, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.427774, 0)
 
 [node name="Mesh" type="MeshInstance3D" parent="Level/Ground2" unique_id=227287924]
 mesh = SubResource("BoxMesh_iyx0m")
@@ -52,7 +64,13 @@ mesh = SubResource("BoxMesh_iyx0m")
 shape = SubResource("BoxShape3D_74lek")
 
 [node name="SpotLight3D" type="SpotLight3D" parent="." unique_id=1169113251]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 16.897547, 0)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 12.785688, 0)
 light_energy = 16.0
-spot_range = 26.551054
-spot_angle = 51.54338
+spot_range = 33.79741
+spot_angle = 68.56428
+spot_angle_attenuation = 0.35355416
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="." unique_id=1887967739]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.117606, -10.698897)
+radius = 2.0
+height = 7.3
