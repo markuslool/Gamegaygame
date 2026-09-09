@@ -159,6 +159,9 @@ func _update_steps(delta: float, moving: bool) -> void:
 		return
 	if not moving or not is_on_floor():
 		_step_timer = 0.0
+		# Прыжок / остановка — обрываем звук шага сразу
+		if _step_player.playing:
+			_step_player.stop()
 		return
 	_step_timer -= delta
 	if _step_timer > 0.0:
