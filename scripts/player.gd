@@ -2,6 +2,7 @@ extends CharacterBody3D
 
 const PAUSE_MENU := preload("res://scenes/pause_menu.tscn")
 const STEP_SOUND := preload("res://resorses/audio/steps.mp3")
+const GameSettings := preload("res://scripts/settings.gd")
 
 @export var speed: float = 5.0
 @export var sprint_speed: float = 8.5
@@ -26,6 +27,7 @@ var is_sprinting: bool = false
 var _pitch: float = 0.0
 var _regen_cooldown: float = 0.0
 var _stamina_bar: ProgressBar
+var _invert_y := false
 
 var _step_player: AudioStreamPlayer
 var _step_timer: float = 0.0
@@ -37,6 +39,11 @@ func _ready() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	stamina = stamina_max
+	# Настройки из меню (чувствительность, инверсия, FOV, пост-эффекты сцены).
+	mouse_sensitivity = GameSettings.get_mouse_sensitivity()
+	_invert_y = GameSettings.get_invert_y()
+	camera.fov = GameSettings.get_camera_fov()
+	GameSettings.apply_post_fx(get_tree())
 	camera.current = true
 	# CSG-меш внутри игрока мешает FPS-обзору — прячем его,
 	# коллизия (CollisionShape3D) при этом остаётся.
@@ -60,7 +67,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var mm := event as InputEventMouseMotion
 		rotate_y(-mm.relative.x * mouse_sensitivity)
-		_pitch = clampf(_pitch - mm.relative.y * mouse_sensitivity, -1.4, 1.4)
+		var dy := mm.relative.y * mouse_sensitivity
+		_pitch = clampf(_pitch + dy if _invert_y else _pitch - dy, -1.4, 1.4)
 		camera.rotation.x = _pitch
 
 
