@@ -1,3 +1,11 @@
 [gd_scene format=3 uid="uid://dnykm7udnrqio"]
 
+[ext_resource type="Script" uid="uid://u41qnohnfepc" path="res://scripts/free_camera.gd" id="1_errlg"]
+
 [node name="test" type="Node3D" unique_id=1472224898]
+
+[node name="FreeCamera" type="Camera3D" parent="." unique_id=1728777675 groups=["camera"]]
+transform = Transform3D(1, 0, 0, 0, 0.928477, 0.371391, 0, -0.371391, 0.928477, 0, 8, 15)
+current = true
+fov = 70.0
+script = ExtResource("1_errlg")
