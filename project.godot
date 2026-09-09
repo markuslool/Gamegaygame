@@ -46,3 +46,4 @@ enabled=PackedStringArray("res://addons/debug_menu/plugin.cfg")
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+renderer/rendering_method="mobile"
