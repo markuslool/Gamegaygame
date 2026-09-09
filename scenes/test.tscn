@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://dnykm7udnrqio"]
 
 [ext_resource type="Shape3D" uid="uid://dohtk3y8ncbr3" path="res://resorses/collisions/player.tres" id="1_errlg"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_errlg"]
 sky_top_color = Color(0.35, 0.55, 0.9, 1)
@@ -48,14 +49,17 @@ mesh = SubResource("BoxMesh_iyx0m")
 shape = SubResource("BoxShape3D_74lek")
 
 [node name="player" type="CharacterBody3D" parent="." unique_id=1566574314]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.7132874, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9829683, 0)
+script = ExtResource("2_player")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="player" unique_id=263016561]
 shape = ExtResource("1_errlg")
 
 [node name="Camera3D" type="Camera3D" parent="player" unique_id=2105755736]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.42670894, -0.066372395)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+current = true
+fov = 70.0
 
 [node name="CSGCylinder3D" type="CSGCylinder3D" parent="player" unique_id=602873205]
-radius = 2.0
-height = 8.0
+radius = 0.5
+height = 2.0
