@@ -4,6 +4,10 @@
 [ext_resource type="Script" uid="uid://be8v2yu77yif3" path="res://scripts/player.gd" id="2_player"]
 [ext_resource type="AudioStream" uid="uid://b27alxje51q2t" path="res://resorses/audio/steps.mp3" id="3_iyx0m"]
 
+[sub_resource type="Environment" id="Environment_iyx0m"]
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_74lek"]
+
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.3, 0.45, 0.3, 1)
 roughness = 0.9
@@ -18,10 +22,15 @@ size = Vector3(50, 1.2, 50)
 [node name="test" type="Node3D" unique_id=1472224898]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1783029330]
+environment = SubResource("Environment_iyx0m")
+camera_attributes = SubResource("CameraAttributesPractical_74lek")
 
 [node name="player" type="CharacterBody3D" parent="." unique_id=1566574314]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.0345984, 0)
 script = ExtResource("2_player")
+speed = 10.0
+sprint_speed = 20.0
+sprint_pitch = 1.2
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="player" unique_id=263016561]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.58740234, 0)
@@ -56,7 +65,12 @@ mesh = SubResource("BoxMesh_iyx0m")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 shape = SubResource("BoxShape3D_74lek")
 
-[node name="CSGCylinder3D" type="CSGCylinder3D" parent="." unique_id=1887967739]
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="Level" unique_id=1887967739]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.117606, -10.698897)
 radius = 2.0
 height = 7.3
+
+[node name="Node" type="Node" parent="Level" unique_id=875916955]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1880346800]
+transform = Transform3D(0.9456201, 0.074609704, -0.31660074, 0.32430336, -0.2913612, 0.89996445, -0.02509909, -0.9536991, -0.2997132, -22.511751, 32.6324, -25.746254)
