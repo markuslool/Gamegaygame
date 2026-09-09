@@ -120,6 +120,9 @@ var display_size := Display_Size.SIZE_12_DEFAULT:
 # Value of `Time.get_ticks_usec()` on the previous frame.
 var last_tick := 0
 
+# Счётчик кадров для периодического обновления блока Settings.
+var _settings_refresh_counter := 0
+
 var thread := Thread.new()
 
 ## Returns the sum of all values of an array (use as a parameter to `Array.reduce()`).
@@ -351,6 +354,9 @@ func update_settings_label() -> void:
 
 		if not antialiasing_3d_string.is_empty():
 			settings.text += "\n3D Antialiasing: %s" % antialiasing_3d_string
+
+		if viewport.scaling_3d_mode == Viewport.SCALING_3D_MODE_FSR or viewport.scaling_3d_mode == Viewport.SCALING_3D_MODE_FSR2:
+			settings.text += "\nFSR Sharpness: %.2f" % viewport.fsr_sharpness
 
 		var environment := viewport.get_camera_3d().get_world_3d().environment
 		if environment:
@@ -600,28 +606,42 @@ func _process(_delta: float) -> void:
 			if not vsync_string.is_empty():
 				frame_time.text += " (" + vsync_string + ")"
 
-		frame_number.text = "Frame: " + str(Engine.get_frames_drawn())
+	frame_number.text = "Frame: " + str(Engine.get_frames_drawn())
 
-		frame_stats.text = str(
-			&"Draw calls: %d" % Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
-			&", Primitives: ", int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
-			&", VRAM: %d" % snapped(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) * 0.000001, 1.0), &" MB")
+	frame_stats.text = str(
+		&"Draw calls: %d" % Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+		&", Primitives: ", int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
+		&", VRAM: %d" % snapped(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) * 0.000001, 1.0), &" MB",
+		&", RAM: %d" % snapped(Performance.get_monitor(Performance.MEMORY_STATIC) * 0.000001, 1.0), &" MB",
+		&", Nodes: %d" % Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+
+	# Настройки графики меняются в рантайме (наше меню настроек),
+	# поэтому блок Settings обновляем периодически, а не только при ресайзе.
+	_settings_refresh_counter += 1
+	if _settings_refresh_counter >= 30 and style == Style.VISIBLE_DETAILED:
+		_settings_refresh_counter = 0
+		update_settings_label()
 
 	last_tick = Time.get_ticks_usec()
 
 
 ## Captures a screenshot and saves it to the user folder in user://screenshots.
+## The menu hides itself for the capture so screenshots come out clean.
 func do_screenshot() -> void:
-	await RenderingServer.frame_post_draw # Wait until frame is drawn
-	var image := get_viewport().get_texture().get_image() 
+	var prev_style := style
+	style = Style.HIDDEN
+	await RenderingServer.frame_post_draw # кадр ещё со старым составом
+	await RenderingServer.frame_post_draw # кадр уже без меню
+	var image := get_viewport().get_texture().get_image()
+	style = prev_style
+
+	if image == null or image.is_empty():
+		printerr("Failed to capture screen.")
+		return
 
 	# Fix image size for true pixel game, too small image output
 	if image.get_size().x != get_viewport().size.x or image.get_size().y != get_viewport().size.y:
 		image.resize(get_viewport().size.x, get_viewport().size.y, Image.INTERPOLATE_NEAREST)
-	
-	if not image:
-		printerr("Failed to capture screen.")
-		return
 
 	# Ensure the screenshots directory exists
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://screenshots"))
