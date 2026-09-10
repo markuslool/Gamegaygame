@@ -14,6 +14,10 @@
 [ext_resource type="Texture2D" uid="uid://c6qgvl07yr1i0" path="res://resorses/textures/room/poster_rings.png" id="18_post2"]
 [ext_resource type="Texture2D" uid="uid://cs2xii6f1c425" path="res://resorses/textures/room/poster_tri.png" id="19_post3"]
 [ext_resource type="Texture2D" path="res://resorses/textures/room/city_night.png" id="20_city"]
+[ext_resource type="Shader" path="res://shaders/room/led_rainbow.gdshader" id="30_led"]
+[ext_resource type="Shader" path="res://shaders/room/screen_code.gdshader" id="31_screen"]
+[ext_resource type="Shader" path="res://shaders/room/city_twinkle.gdshader" id="32_city"]
+[ext_resource type="Shader" path="res://shaders/room/light_shaft.gdshader" id="33_shaft"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
 sky_top_color = Color(0.3, 0.5, 0.85, 1)
@@ -24,6 +28,30 @@ sun_angle_max = 12.0
 
 [sub_resource type="Sky" id="Sky_1"]
 sky_material = SubResource("SkyMat_1")
+
+[sub_resource type="ShaderMaterial" id="ShaderMatLED"]
+shader = ExtResource("30_led")
+
+[sub_resource type="ShaderMaterial" id="ShaderMatScreenC"]
+shader = ExtResource("31_screen")
+shader_parameter/tint = Color(0.45, 0.85, 1, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMatScreenS"]
+shader = ExtResource("31_screen")
+shader_parameter/tint = Color(0.55, 0.4, 1, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMatCity"]
+shader = ExtResource("32_city")
+shader_parameter/city = ExtResource("20_city")
+
+[sub_resource type="ShaderMaterial" id="ShaderMatShaft"]
+shader = ExtResource("33_shaft")
+
+[sub_resource type="CylinderMesh" id="ShaftMesh"]
+top_radius = 0.18
+bottom_radius = 0.65
+height = 2.3
+radial_segments = 24
 
 [sub_resource type="Environment" id="Environment_iyx0m"]
 background_mode = 2
@@ -36,22 +64,26 @@ tonemap_exposure = 1.1
 ssao_enabled = true
 ssao_light_affect = 0.4
 glow_enabled = true
-glow_intensity = 0.6
+glow_intensity = 0.9
+glow_strength = 1.15
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_74lek"]
 
 [sub_resource type="StandardMaterial3D" id="MatFloor"]
 albedo_texture = ExtResource("10_floor")
 roughness = 0.6
+specular = 0.35
 uv1_scale = Vector3(4, 4, 1)
 
 [sub_resource type="StandardMaterial3D" id="MatCeil"]
 albedo_texture = ExtResource("12_ceil")
+specular = 0.2
 uv1_scale = Vector3(2, 2, 1)
 
 [sub_resource type="StandardMaterial3D" id="MatWall"]
 albedo_texture = ExtResource("11_wall")
 roughness = 0.95
+specular = 0.2
 uv1_scale = Vector3(2, 2, 1)
 
 [sub_resource type="BoxShape3D" id="ShapeFloor"]
@@ -66,6 +98,7 @@ size = Vector3(0.2, 3.2, 6.4)
 [sub_resource type="StandardMaterial3D" id="MatDark"]
 albedo_texture = ExtResource("13_desk")
 roughness = 0.6
+specular = 0.2
 uv1_scale = Vector3(2, 2, 1)
 
 [sub_resource type="BoxShape3D" id="ShapeDesk"]
@@ -115,19 +148,23 @@ size = Vector3(0.6, 1, 0.6)
 [sub_resource type="StandardMaterial3D" id="MatShelf"]
 albedo_color = Color(0.2, 0.13, 0.08, 1)
 roughness = 0.8
+specular = 0.25
 
 [sub_resource type="StandardMaterial3D" id="MatMattress"]
 albedo_texture = ExtResource("14_mattr")
 roughness = 0.9
+specular = 0.2
 uv1_scale = Vector3(2, 2, 1)
 
 [sub_resource type="StandardMaterial3D" id="MatPillow"]
 albedo_color = Color(0.9, 0.9, 0.9, 1)
 roughness = 0.9
+specular = 0.15
 
 [sub_resource type="StandardMaterial3D" id="MatBlanket"]
 albedo_texture = ExtResource("15_blank")
 roughness = 0.9
+specular = 0.2
 uv1_scale = Vector3(2, 2, 1)
 
 [sub_resource type="BoxShape3D" id="ShapeBed"]
@@ -136,6 +173,7 @@ size = Vector3(1.7, 0.9, 2.3)
 [sub_resource type="StandardMaterial3D" id="MatRug"]
 albedo_texture = ExtResource("16_rug")
 roughness = 0.95
+specular = 0.15
 
 [sub_resource type="StandardMaterial3D" id="MatCity"]
 albedo_texture = ExtResource("20_city")
@@ -162,6 +200,7 @@ roughness = 0.25
 albedo_texture = ExtResource("17_post1")
 emission_enabled = true
 emission = Color(1, 1, 1, 1)
+specular = 0.2
 emission_energy_multiplier = 0.8
 emission_texture = ExtResource("17_post1")
 
@@ -169,6 +208,7 @@ emission_texture = ExtResource("17_post1")
 albedo_texture = ExtResource("18_post2")
 emission_enabled = true
 emission = Color(1, 1, 1, 1)
+specular = 0.2
 emission_energy_multiplier = 0.8
 emission_texture = ExtResource("18_post2")
 
@@ -176,6 +216,7 @@ emission_texture = ExtResource("18_post2")
 albedo_texture = ExtResource("19_post3")
 emission_enabled = true
 emission = Color(1, 1, 1, 1)
+specular = 0.2
 emission_energy_multiplier = 0.8
 emission_texture = ExtResource("19_post3")
 
@@ -207,6 +248,11 @@ light_color = Color(1, 0.96, 0.9, 1)
 light_energy = 0.45
 shadow_enabled = true
 directional_shadow_max_distance = 120.0
+
+[node name="Moon" type="DirectionalLight3D" parent="." unique_id=1880346801]
+rotation = Vector3(-0.45, 0, 0)
+light_color = Color(0.5, 0.7, 1, 1)
+light_energy = 0.3
 
 [node name="player" type="CharacterBody3D" parent="." unique_id=1566574314]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.58, 1.8)
@@ -335,7 +381,7 @@ material = SubResource("MatDark")
 [node name="ScreenC" type="CSGBox3D" parent="Level" unique_id=1996443162]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.32, -2.555)
 size = Vector3(0.92, 0.54, 0.02)
-material = SubResource("MatScreenC")
+material = SubResource("ShaderMatScreenC")
 
 [node name="MonitorL" type="CSGBox3D" parent="Level" unique_id=1057201378]
 transform = Transform3D(0.900404, 0, -0.435021, 0, 1, 0, 0.435021, 0, 0.900404, -1.62, 1.28, -2.5)
@@ -345,7 +391,7 @@ material = SubResource("MatDark")
 [node name="ScreenL" type="CSGBox3D" parent="Level" unique_id=1917643049]
 transform = Transform3D(0.900404, 0, -0.435021, 0, 1, 0, 0.435021, 0, 0.900404, -1.605, 1.28, -2.468)
 size = Vector3(0.68, 0.43, 0.02)
-material = SubResource("MatScreenS")
+material = SubResource("ShaderMatScreenS")
 
 [node name="MonitorR" type="CSGBox3D" parent="Level" unique_id=313688565]
 transform = Transform3D(0.900404, 0, 0.435021, 0, 1, 0, -0.435021, 0, 0.900404, 0.02, 1.28, -2.5)
@@ -355,7 +401,7 @@ material = SubResource("MatDark")
 [node name="ScreenR" type="CSGBox3D" parent="Level" unique_id=121396834]
 transform = Transform3D(0.900404, 0, 0.435021, 0, 1, 0, -0.435021, 0, 0.900404, 0.005, 1.28, -2.468)
 size = Vector3(0.68, 0.43, 0.02)
-material = SubResource("MatScreenS")
+material = SubResource("ShaderMatScreenS")
 
 [node name="StandC" type="CSGBox3D" parent="Level" unique_id=1117023784]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.94, -2.6)
@@ -393,7 +439,7 @@ material = SubResource("MatDark")
 [node name="TowerStrip" type="CSGBox3D" parent="Level" unique_id=1404473796]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.35, -2.065)
 size = Vector3(0.05, 0.5, 0.02)
-material = SubResource("MatScreenC")
+material = SubResource("ShaderMatScreenC")
 
 [node name="TowerBody" type="StaticBody3D" parent="Level" unique_id=56859691]
 
@@ -520,17 +566,17 @@ material = SubResource("MatPostY")
 [node name="LEDBack" type="CSGBox3D" parent="Level" unique_id=121396836]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.92, -2.97)
 size = Vector3(8, 0.05, 0.05)
-material = SubResource("MatLED")
+material = SubResource("ShaderMatLED")
 
 [node name="LEDLeft" type="CSGBox3D" parent="Level" unique_id=1117023786]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.97, 2.92, 0)
 size = Vector3(0.05, 0.05, 6)
-material = SubResource("MatLED")
+material = SubResource("ShaderMatLED")
 
 [node name="LEDRight" type="CSGBox3D" parent="Level" unique_id=2128029175]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.97, 2.92, 0)
 size = Vector3(0.05, 0.05, 6)
-material = SubResource("MatLED")
+material = SubResource("ShaderMatLED")
 
 [node name="Trash1" type="CSGCylinder3D" parent="Level" unique_id=234498203]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.12, -1.75)
@@ -572,8 +618,14 @@ omni_range = 10.0
 [node name="MonitorGlow" type="OmniLight3D" parent="Level" unique_id=2145957497]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.3, -1.7)
 light_color = Color(0.5, 0.9, 1, 1)
-light_energy = 0.9
+light_energy = 1.1
 omni_range = 3.5
+
+[node name="LampShaft" type="MeshInstance3D" parent="Level" unique_id=175258302]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.72, 0)
+cast_shadow = 0
+mesh = SubResource("ShaftMesh")
+material_override = SubResource("ShaderMatShaft")
 
 [node name="RGBGlow" type="OmniLight3D" parent="Level" unique_id=175258295]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0.9, -2.1)
@@ -589,7 +641,7 @@ material = SubResource("MatDark")
 [node name="WindowCity" type="CSGBox3D" parent="Level" unique_id=175258297]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 1.8, 2.93)
 size = Vector3(1.5, 1.1, 0.02)
-material = SubResource("MatCity")
+material = SubResource("ShaderMatCity")
 
 [node name="WindowSill" type="CSGBox3D" parent="Level" unique_id=175258298]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 1.12, 2.9)
@@ -599,7 +651,7 @@ material = SubResource("MatShelf")
 [node name="DeskStrip" type="CSGBox3D" parent="Level" unique_id=175258299]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.66, -2.02)
 size = Vector3(2.2, 0.04, 0.04)
-material = SubResource("MatLED")
+material = SubResource("ShaderMatLED")
 
 [node name="DeskGlow" type="OmniLight3D" parent="Level" unique_id=175258300]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.35, -1.9)
