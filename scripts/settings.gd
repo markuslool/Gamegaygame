@@ -339,7 +339,9 @@ static func _aa_max_idx() -> int:
 # Точного совпадения может не быть — тогда подбираем по MSAA+TAA.
 static func _saved_aa_idx(cfg: ConfigFile) -> int:
 	if cfg.has_section_key("video", "aa_preset"):
-		return clampi(int(cfg.get_value("video", "aa_preset", 0)), 0, _aa_max_idx())
+		return clampi(int(cfg.get_value("video", "aa_preset", 2)), 0, _aa_max_idx())
+	if not cfg.has_section_key("video", "msaa3d"):
+		return mini(2, _aa_max_idx()) # свежий запуск: MSAA 2× из коробки
 	var msaa := clampi(int(cfg.get_value("video", "msaa3d", 0)), 0, MSAA_MODES.size() - 1)
 	var fxaa := bool(cfg.get_value("video", "fxaa", false))
 	var taa := bool(cfg.get_value("video", "taa", false))

@@ -10,17 +10,21 @@ import zlib
 OUT = os.path.join("resorses", "textures", "room")
 
 
-def write_png(path, w, h, px):
+def write_png(path, w, h, px, alpha=False):
     def chunk(typ, data):
         c = struct.pack(">I", len(data)) + typ + data
         c += struct.pack(">I", zlib.crc32(typ + data) & 0xFFFFFFFF)
         return c
 
-    raw = b"".join(
-        b"\x00" + b"".join(struct.pack("BBB", *p) for p in row) for row in px
-    )
+    if alpha:
+        color_type = 6
+        pack = lambda p: struct.pack("BBBB", *p)
+    else:
+        color_type = 2
+        pack = lambda p: struct.pack("BBB", *p[:3])
+    raw = b"".join(b"\x00" + b"".join(pack(p) for p in row) for row in px)
     png = b"\x89PNG\r\n\x1a\n"
-    png += chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+    png += chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, color_type, 0, 0, 0))
     png += chunk(b"IDAT", zlib.compress(raw, 9))
     png += chunk(b"IEND", b"")
     with open(path, "wb") as f:
@@ -46,7 +50,7 @@ def blank(w, h, color):
 
 
 def floor_wood():
-    w, h, rng = 512, 512, random.Random(7)
+    w, h, rng = 1024, 1024, random.Random(7)
     px = blank(w, h, (0, 0, 0))
     rows = 4
     rh = h // rows
@@ -205,11 +209,66 @@ def poster_tri():
     return w, h, noise(px, 4, rng)
 
 
+def blob_shadow():
+    # Радиальный градиент: чёрный центр -> прозрачные края. RGBA!
+    s, rng = 128, random.Random(99)
+    px = []
+    for y in range(s):
+        row = []
+        for x in range(s):
+            dx = (x - s / 2 + 0.5) / (s / 2)
+            dy = (y - s / 2 + 0.5) / (s / 2)
+            d = min(1.0, (dx * dx + dy * dy) ** 0.5)
+            a = clamp255(200 * max(0.0, 1.0 - d) ** 1.6)
+            row.append((0, 0, 0, a))
+    return s, s, px, True
+
+
+def strip_shadow():
+    # Линейный градиент: верх прозрачный -> низ тёмный. RGBA!
+    w, h = 64, 128
+    px = []
+    for y in range(h):
+        t = y / float(h - 1)  # 0 верх -> 1 низ
+        a = clamp255(160 * t ** 1.5)
+        px.append([(0, 0, 0, a) for _ in range(w)])
+    return w, h, px, True
+
+
+def city_night():
+    w, h, rng = 256, 192, random.Random(88)
+    px = blank(w, h, (0, 0, 0))
+    for y in range(h):
+        t = y / float(h)
+        # небо: тёмно-синий -> фиолетовый к горизонту (2/3 высоты)
+        if y < 128:
+            px_row = (int(8 + 20 * t), int(10 + 14 * t), int(30 + 30 * t))
+        else:
+            px_row = (24, 16, 44)
+        for x in range(w):
+            px[y][x] = px_row
+    # луна
+    for y in range(20, 52):
+        for x in range(150, 182):
+            if (x - 166) ** 2 + (y - 36) ** 2 < 200:
+                px[y][x] = (230, 235, 245)
+    # дома-силуэты с горящими окнами ниже горизонта
+    for bx in range(0, w, 32):
+        bh = rng.randint(30, 64)
+        bw = rng.randint(24, 32)
+        for y in range(h - bh, h):
+            for x in range(bx, min(bx + bw, w)):
+                px[y][x] = (12, 12, 20)
+                if (x - bx) % 6 < 3 and (y - (h - bh)) % 8 < 4 and rng.random() < 0.55:
+                    px[y][x] = (255, 200, 120) if rng.random() < 0.7 else (140, 220, 255)
+    return w, h, noise(px, 5, rng)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     jobs = [
         ("floor_wood.png", floor_wood()),
-        ("wall_plaster.png", plaster((41, 38, 51), 256, 7, 8)),
+        ("wall_plaster.png", plaster((41, 38, 51), 512, 7, 8)),
         ("rug.png", rug()),
         ("blanket.png", blanket()),
         ("mattress.png", mattress()),
@@ -218,9 +277,16 @@ def main():
         ("poster_invader.png", poster_invader()),
         ("poster_rings.png", poster_rings()),
         ("poster_tri.png", poster_tri()),
+        ("city_night.png", city_night()),
+    ]
+    alpha_jobs = [
+        ("blob_shadow.png", blob_shadow()),
+        ("strip_shadow.png", strip_shadow()),
     ]
     for name, (w, h, px) in jobs:
         write_png(os.path.join(OUT, name), w, h, px)
+    for name, (w, h, px, _a) in alpha_jobs:
+        write_png(os.path.join(OUT, name), w, h, px, alpha=True)
 
 
 if __name__ == "__main__":
