@@ -14,6 +14,14 @@ const GameSettings := preload("res://scripts/settings.gd")
 @export var stamina_regen: float = 18.0
 @export var stamina_regen_delay: float = 1.0
 
+## Прыжок «с весом»: сильнее тянет вниз при падении и при раннем отпускании Space.
+@export var fall_gravity_mult: float = 1.7
+@export var low_jump_mult: float = 2.2
+
+## Покачивание камеры при ходьбе.
+@export var head_bob_enabled := true
+@export var head_bob_amount := 1.0
+
 @export var walk_step_interval: float = 0.4
 @export var sprint_step_interval: float = 0.28
 @export var walk_pitch: float = 1.0
@@ -46,6 +54,9 @@ var _pitch: float = 0.0
 var _regen_cooldown: float = 0.0
 var _stamina_bar: ProgressBar
 var _invert_y := false
+var _bob_phase := 0.0
+var _bob_strength := 0.0
+var _cam_base := Vector3.ZERO
 
 var _step_player: AudioStreamPlayer
 var _step_timer: float = 0.0
@@ -63,6 +74,7 @@ func _ready() -> void:
 	camera.fov = GameSettings.get_camera_fov()
 	GameSettings.apply_post_fx(get_tree())
 	camera.current = true
+	_cam_base = camera.position
 	# CSG-меш внутри игрока мешает FPS-обзору — прячем его,
 	# коллизия (CollisionShape3D) при этом остаётся.
 	if has_node("CSGCylinder3D"):
@@ -119,12 +131,19 @@ func _physics_process(delta: float) -> void:
 			_notice = ""
 			_update_inventory_ui()
 
-	# Гравитация
+	# Гравитация с весом: падение быстрее взлёта,
+	# ранний отпуск Space обрезает прыжок.
+	var jump_held := Input.is_key_pressed(KEY_SPACE)
 	if not is_on_floor():
-		velocity += get_gravity() * delta
+		var g := get_gravity()
+		if velocity.y < 0.0:
+			g *= fall_gravity_mult
+		elif not jump_held:
+			g *= low_jump_mult
+		velocity += g * delta
 
 	# Прыжок
-	if Input.is_key_pressed(KEY_SPACE) and is_on_floor():
+	if jump_held and is_on_floor():
 		velocity.y = jump_velocity
 
 	# Движение относительно поворота игрока
@@ -157,6 +176,18 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_update_stamina_ui()
 	_update_steps(delta, input_dir.length() > 0.1)
+
+	# Покачивание камеры: фаза от скорости, затухание на месте.
+	if head_bob_enabled:
+		var hspeed := Vector2(velocity.x, velocity.z).length()
+		var moving := hspeed > 0.5 and is_on_floor()
+		_bob_strength = move_toward(_bob_strength, 1.0 if moving else 0.0, delta * (6.0 if moving else 4.0))
+		if _bob_strength > 0.001:
+			_bob_phase += delta * (4.0 + hspeed * 1.1)
+			var off := Vector3(sin(_bob_phase) * 0.035, -absf(cos(_bob_phase)) * 0.03, 0.0) * _bob_strength * head_bob_amount
+			camera.position = _cam_base + off
+		elif camera.position != _cam_base:
+			camera.position = _cam_base
 
 
 func _build_stamina_ui() -> void:
